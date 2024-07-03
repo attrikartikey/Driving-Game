@@ -9,13 +9,13 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
-  late GoogleMapController mapController;
+  GoogleMapController? mapController;
   LocationData? currentLocation;
 
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
     if (currentLocation != null) {
-      mapController.animateCamera(CameraUpdate.newLatLng(
+      mapController?.animateCamera(CameraUpdate.newLatLng(
         LatLng(currentLocation!.latitude!, currentLocation!.longitude!),
       ));
     }
@@ -46,7 +46,7 @@ class _MapScreenState extends State<MapScreen> {
     currentLocation = await location.getLocation();
     setState(() {
       if (currentLocation != null) {
-        mapController.animateCamera(CameraUpdate.newLatLng(
+        mapController?.animateCamera(CameraUpdate.newLatLng(
           LatLng(currentLocation!.latitude!, currentLocation!.longitude!),
         ));
       }
@@ -56,7 +56,7 @@ class _MapScreenState extends State<MapScreen> {
       setState(() {
         currentLocation = loc;
         if (mapController != null) {
-          mapController.animateCamera(CameraUpdate.newLatLng(
+          mapController?.animateCamera(CameraUpdate.newLatLng(
             LatLng(currentLocation!.latitude!, currentLocation!.longitude!),
           ));
         }
