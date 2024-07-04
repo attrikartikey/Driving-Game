@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:location/location.dart';
+import 'routes.dart';
 
 class MapScreen extends StatefulWidget {
   @override
@@ -36,7 +37,6 @@ class _MapScreenState extends State<MapScreen> {
     if (await Permission.location.isGranted) {
       _getCurrentLocation();
     } else {
-      // Handle the case where the user denies the permission
       print("Location permission denied");
     }
   }
@@ -64,11 +64,24 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
+  void _navigateToRoutesScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => RoutesScreen(mapController: mapController)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Google Maps Background Dev'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.directions),
+            onPressed: _navigateToRoutesScreen,
+          ),
+        ],
       ),
       body: currentLocation == null
           ? Center(child: CircularProgressIndicator())
