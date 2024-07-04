@@ -18,6 +18,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Google Maps Background',
       home: MapScreen(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }

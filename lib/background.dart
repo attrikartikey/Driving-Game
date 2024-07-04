@@ -76,9 +76,9 @@ class _MapScreenState extends State<MapScreen> {
         onMapCreated: _onMapCreated,
         initialCameraPosition: CameraPosition(
           target: LatLng(37.7749, -122.4194), // Default to San Francisco
-          zoom: 12.0,
+          zoom: 18.0,
         ),
-        mapType: MapType.terrain,
+        mapType: MapType.normal,
         myLocationEnabled: true,
         myLocationButtonEnabled: true,
       ),
