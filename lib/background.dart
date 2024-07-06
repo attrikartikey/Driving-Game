@@ -14,6 +14,7 @@ class _MapScreenState extends State<MapScreen> {
   LocationData? currentLocation;
   LatLng? startLatLng;
   LatLng? destinationLatLng;
+  Set<Marker> _markers = {};
 
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
@@ -82,8 +83,29 @@ class _MapScreenState extends State<MapScreen> {
       setState(() {
         startLatLng = result['start'];
         destinationLatLng = result['destination'];
+        _updateMarkers();
       });
     }
+  }
+
+  void _updateMarkers() {
+    setState(() {
+      _markers.clear();
+      if (startLatLng != null) {
+        _markers.add(Marker(
+          markerId: MarkerId('start'),
+          position: startLatLng!,
+          infoWindow: InfoWindow(title: 'Start Location'),
+        ));
+      }
+      if (destinationLatLng != null) {
+        _markers.add(Marker(
+          markerId: MarkerId('destination'),
+          position: destinationLatLng!,
+          infoWindow: InfoWindow(title: 'Destination Location'),
+        ));
+      }
+    });
   }
 
   @override
@@ -109,6 +131,7 @@ class _MapScreenState extends State<MapScreen> {
         mapType: MapType.normal,
         myLocationEnabled: true,
         myLocationButtonEnabled: true,
+        markers: _markers,
       ),
     );
   }

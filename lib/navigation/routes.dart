@@ -58,17 +58,20 @@ class _RoutesScreenState extends State<RoutesScreen> {
 
     String baseURL = 'https://maps.googleapis.com/maps/api/place/autocomplete/json';
     String request = '$baseURL?input=$input&key=$PLACES_API_KEY&sessiontoken=$_sessionToken';
-    var response = await http.get(Uri.parse(request));
-    var data = json.decode(response.body);
-    print('Autocomplete response status: ${response.statusCode}');
-    print('Autocomplete response data: $data');
-
-    if (response.statusCode == 200) {
-      setState(() {
-        _placeList = data['predictions'];
-      });
-    } else {
-      print('Failed to load predictions');
+    try {
+      var response = await http.get(Uri.parse(request)).timeout(Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        var data = json.decode(response.body);
+        print('Autocomplete response data: $data');
+        if (!mounted) return;
+        setState(() {
+          _placeList = data['predictions'];
+        });
+      } else {
+        print('Failed to load predictions: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching suggestions: $e');
     }
   }
 
@@ -78,33 +81,43 @@ class _RoutesScreenState extends State<RoutesScreen> {
 
     String baseURL = 'https://maps.googleapis.com/maps/api/place/details/json';
     String request = '$baseURL?place_id=$placeId&key=$PLACES_API_KEY&sessiontoken=$_sessionToken';
-    var response = await http.get(Uri.parse(request));
-    var data = json.decode(response.body);
-    print('Place details response status: ${response.statusCode}');
-    print('Place details response data: $data');
-
-    if (response.statusCode == 200) {
-      var placeDetails = data['result'];
-      var lat = placeDetails['geometry']['location']['lat'];
-      var lng = placeDetails['geometry']['location']['lng'];
-      print('Selected Place: $lat, $lng');
-      setState(() {
-        if (isStart) {
-          startController.text = placeDetails['name'];
-          startLatLng = LatLng(lat, lng);
-        } else {
-          destinationController.text = placeDetails['name'];
-          destinationLatLng = LatLng(lat, lng);
-        }
-        _placeList = [];
-      });
-    } else {
-      print('Failed to load place details');
+    try {
+      var response = await http.get(Uri.parse(request)).timeout(Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        var data = json.decode(response.body);
+        print('Place details response data: $data');
+        var placeDetails = data['result'];
+        var lat = placeDetails['geometry']['location']['lat'];
+        var lng = placeDetails['geometry']['location']['lng'];
+        print('Selected Place: $lat, $lng');
+        if (!mounted) return;
+        setState(() {
+          if (isStart) {
+            startController.text = placeDetails['name'];
+            startLatLng = LatLng(lat, lng);
+            print('Start Location: ${placeDetails['name']}, Lat: $lat, Lng: $lng');
+          } else {
+            destinationController.text = placeDetails['name'];
+            destinationLatLng = LatLng(lat, lng);
+            print('Destination Location: ${placeDetails['name']}, Lat: $lat, Lng: $lng');
+          }
+          _placeList = [];
+        });
+      } else {
+        print('Failed to load place details: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching place details: $e');
     }
   }
 
   void _saveLocations() {
     if (startLatLng != null && destinationLatLng != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Making a path from ${startController.text} to ${destinationController.text}'),
+        ),
+      );
       Navigator.pop(context, {
         'start': startLatLng,
         'destination': destinationLatLng,
@@ -132,6 +145,13 @@ class _RoutesScreenState extends State<RoutesScreen> {
         );
       },
     );
+  }
+
+  @override
+  void dispose() {
+    startController.dispose();
+    destinationController.dispose();
+    super.dispose();
   }
 
   @override
@@ -178,6 +198,9 @@ class _RoutesScreenState extends State<RoutesScreen> {
                     onTap: () async {
                       String placeId = _placeList[index]["place_id"];
                       await _getPlaceDetails(placeId);
+                      setState(() {
+                        _placeList = [];
+                      });
                     },
                     child: ListTile(
                       title: Text(_placeList[index]["description"]),
