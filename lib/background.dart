@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -15,6 +17,7 @@ class _MapScreenState extends State<MapScreen> {
   LatLng? startLatLng;
   LatLng? destinationLatLng;
   Set<Marker> _markers = {};
+  Set<Polyline> _polylines = {};
 
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
@@ -67,15 +70,87 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
+  Future<void> _getRoutes() async {
+    if (startLatLng == null || destinationLatLng == null) {
+      return;
+    }
+
+    const String DIRECTIONS_API_KEY = "AIzaSyA45rU9Oy-w-d0AzvrAM3w_DCVthjN43vU";
+    String baseURL = 'https://maps.googleapis.com/maps/api/directions/json';
+    String request = '$baseURL?origin=${startLatLng!.latitude},${startLatLng!
+        .longitude}&destination=${destinationLatLng!
+        .latitude},${destinationLatLng!
+        .longitude}&alternatives=true&key=$DIRECTIONS_API_KEY';
+    var response = await http.get(Uri.parse(request));
+    var data = json.decode(response.body);
+    print('Directions API response data: $data');
+
+    if (data['status'] == 'OK') {
+      _polylines.clear();
+      for (var route in data['routes']) {
+        List<LatLng> polylineCoordinates = [];
+        var points = decodePolyline(route['overview_polyline']['points']);
+        for (var point in points) {
+          polylineCoordinates.add(LatLng(point[0], point[1]));
+        }
+        _polylines.add(Polyline(
+          polylineId: PolylineId(route['summary']),
+          points: polylineCoordinates,
+          color: Colors.blue,
+          width: 5,
+        ));
+      }
+      setState(() {});
+    } else {
+      print('Error getting directions: ${data['status']}');
+    }
+  }
+
+  List<List<double>> decodePolyline(String encoded) {
+    List<List<double>> polyline = [];
+    int index = 0,
+        len = encoded.length;
+    int lat = 0,
+        lng = 0;
+
+    while (index < len) {
+      int b,
+          shift = 0,
+          result = 0;
+      do {
+        b = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      lat += dlat;
+
+      shift = 0;
+      result = 0;
+      do {
+        b = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      lng += dlng;
+
+      polyline.add([(lat / 1E5), (lng / 1E5)]);
+    }
+
+    return polyline;
+  }
+
   void _navigateToRoutesScreen() async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => RoutesScreen(
-          mapController: mapController,
-          initialStartLatLng: startLatLng,
-          initialDestinationLatLng: destinationLatLng,
-        ),
+        builder: (context) =>
+            RoutesScreen(
+              mapController: mapController,
+              initialStartLatLng: startLatLng,
+              initialDestinationLatLng: destinationLatLng,
+            ),
       ),
     );
 
@@ -84,9 +159,32 @@ class _MapScreenState extends State<MapScreen> {
         startLatLng = result['start'];
         destinationLatLng = result['destination'];
         _updateMarkers();
+        _getRoutes();
       });
     }
   }
+
+
+  // void _navigateToRoutesScreen() async {
+  //   final result = await Navigator.push(
+  //     context,
+  //     MaterialPageRoute(
+  //       builder: (context) => RoutesScreen(
+  //         mapController: mapController,
+  //         initialStartLatLng: startLatLng,
+  //         initialDestinationLatLng: destinationLatLng,
+  //       ),
+  //     ),
+  //   );
+  //
+  //   if (result != null) {
+  //     setState(() {
+  //       startLatLng = result['start'];
+  //       destinationLatLng = result['destination'];
+  //       _updateMarkers();
+  //     });
+  //   }
+  // }
 
   void _updateMarkers() {
     setState(() {
@@ -132,6 +230,7 @@ class _MapScreenState extends State<MapScreen> {
         myLocationEnabled: true,
         myLocationButtonEnabled: true,
         markers: _markers,
+        polylines: _polylines,
       ),
     );
   }
