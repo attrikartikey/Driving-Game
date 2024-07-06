@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:location/location.dart';
-import 'routes.dart';
+import 'navigation/routes.dart';
 
 class MapScreen extends StatefulWidget {
   @override
@@ -12,6 +12,8 @@ class MapScreen extends StatefulWidget {
 class _MapScreenState extends State<MapScreen> {
   GoogleMapController? mapController;
   LocationData? currentLocation;
+  LatLng? startLatLng;
+  LatLng? destinationLatLng;
 
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
@@ -64,11 +66,24 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
-  void _navigateToRoutesScreen() {
-    Navigator.push(
+  void _navigateToRoutesScreen() async {
+    final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => RoutesScreen(mapController: mapController)),
+      MaterialPageRoute(
+        builder: (context) => RoutesScreen(
+          mapController: mapController,
+          initialStartLatLng: startLatLng,
+          initialDestinationLatLng: destinationLatLng,
+        ),
+      ),
     );
+
+    if (result != null) {
+      setState(() {
+        startLatLng = result['start'];
+        destinationLatLng = result['destination'];
+      });
+    }
   }
 
   @override
